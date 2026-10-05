@@ -1,0 +1,8 @@
+[05-Oct-2026 21:40:33 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "PHPMailer\PHPMailer\Exception" not found in C:\xampp\htdocs\php-mailing\submit.php:12
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\php-mailing\submit.php on line 12
+[05-Oct-2026 21:40:34 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "PHPMailer\PHPMailer\Exception" not found in C:\xampp\htdocs\php-mailing\submit.php:12
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\php-mailing\submit.php on line 12
