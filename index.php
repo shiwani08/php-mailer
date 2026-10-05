@@ -25,28 +25,30 @@
     </div>
 
     <script>
-        document.getElementById('emailForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        const form = document.getElementById('emailForm');
+        const messageDiv = document.getElementById('message');
 
-            const formData = new FormData(document.getElementById('emailForm'));
-            const messageDiv = document.getElementById('message');
+        function showMessage(text, isSuccess) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
             try {
                 const response = await fetch('submit.php', {
                     method: 'POST',
-                    body: formData
+                    body: new FormData(form)
                 });
 
-                console.log('Response Status:', response.status);
-                console.log('Response OK:', response.ok);
+                console.log(`Response: ${response.status} ${response.statusText}`);
 
                 const responseText = await response.text();
-                console.log('Response Text:', responseText);
+                console.log('Response:', responseText);
 
                 if (!response.ok) {
-                    console.error('HTTP Error:', response.status, response.statusText);
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = `HTTP Error ${response.status}: ${response.statusText}`;
+                    showMessage(`HTTP Error ${response.status}`, false);
                     return;
                 }
 
@@ -54,24 +56,19 @@
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
-                    console.error('JSON Parse Error:', parseError);
-                    console.error('Invalid JSON response:', responseText);
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = 'Invalid server response. Check console for details.';
+                    console.error('Invalid JSON:', responseText);
+                    showMessage('Invalid server response. Check console.', false);
                     return;
                 }
 
-                console.log('Parsed Data:', data);
-                messageDiv.className = 'message ' + (data.success ? 'success' : 'error');
-                messageDiv.textContent = data.message;
+                showMessage(data.message, data.success);
 
                 if (data.success) {
-                    document.getElementById('emailForm').reset();
+                    form.reset();
                 }
             } catch (error) {
-                console.error('Fetch Error:', error);
-                messageDiv.className = 'message error';
-                messageDiv.textContent = 'An error occurred. Check console for details.';
+                console.error('Error:', error);
+                showMessage('An error occurred. Check console.', false);
             }
         });
     </script>

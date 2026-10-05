@@ -7,13 +7,14 @@ ini_set('error_log', __DIR__ . '/error.log');
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-try {
+header('Content-Type: application/json; charset=utf-8');
+
+function loadEnvironment() {
     if (!file_exists('vendor/autoload.php')) {
         throw new Exception('Composer autoload file not found. Run: composer install');
     }
     require 'vendor/autoload.php';
 
-    // Load environment variables from .env file
     if (file_exists('.env')) {
         $envFile = file_get_contents('.env');
         foreach (explode("\n", $envFile) as $line) {
@@ -28,17 +29,23 @@ try {
             }
         }
     }
-} catch (Exception $e) {
-    header('Content-Type: application/json');
-    http_response_code(500);
-    $errorMsg = 'Configuration error: ' . $e->getMessage();
-    error_log($errorMsg);
-    echo json_encode(['success' => false, 'message' => $errorMsg]);
+}
+
+function sendResponse($success, $message, $statusCode) {
+    http_response_code($statusCode);
+    echo json_encode(['success' => $success, 'message' => $message]);
     exit;
 }
 
 function isValidEmail($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+try {
+    loadEnvironment();
+} catch (Exception $e) {
+    error_log('Configuration error: ' . $e->getMessage());
+    sendResponse(false, 'Configuration error: ' . $e->getMessage(), 500);
 }
 
 function sendEmailViaSMTP($recipientEmail) {
@@ -78,32 +85,26 @@ function sendEmailViaSMTP($recipientEmail) {
     }
 }
 
-header('Content-Type: application/json; charset=utf-8');
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendResponse(false, 'Method Not Allowed', 405);
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $recipientEmail = trim($_POST['recipient_email'] ?? '');
+try {
+    $recipientEmail = trim($_POST['recipient_email'] ?? '');
 
-        if (empty($recipientEmail)) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Email address is required']);
-        } elseif (!isValidEmail($recipientEmail)) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Invalid email address format']);
-        } else {
-            $response = sendEmailViaSMTP($recipientEmail);
-            http_response_code($response['success'] ? 200 : 500);
-            echo json_encode($response);
-        }
-    } catch (Exception $e) {
-        http_response_code(500);
-        $errorMsg = 'Error: ' . $e->getMessage() . ' (Line: ' . $e->getLine() . ')';
-        error_log('Unexpected error in submit.php: ' . $errorMsg);
-        echo json_encode(['success' => false, 'message' => $errorMsg]);
+    if (empty($recipientEmail)) {
+        sendResponse(false, 'Email address is required', 400);
     }
-    exit;
-} else {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Method Not Allowed']);
-    exit;
+
+    if (!isValidEmail($recipientEmail)) {
+        sendResponse(false, 'Invalid email address format', 400);
+    }
+
+    $result = sendEmailViaSMTP($recipientEmail);
+    $statusCode = $result['success'] ? 200 : 500;
+    sendResponse($result['success'], $result['message'], $statusCode);
+
+} catch (Exception $e) {
+    error_log('Unexpected error: ' . $e->getMessage());
+    sendResponse(false, 'Error: ' . $e->getMessage(), 500);
 }
